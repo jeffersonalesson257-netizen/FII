@@ -1,10 +1,142 @@
-import axios from "axios";
 import { FIIData, AIAnalysis, ReportAnalysisResult } from "@/types";
 import { GoogleGenAI } from "@google/genai";
 
+const livePrices: Record<string, number> = {};
+
+const mockFIIs: Record<string, any> = {
+  "HGLG11": {
+    ticker: "HGLG11",
+    name: "CGHG Logística",
+    type: "Tijolo",
+    segment: "Logística",
+    price: 165.50,
+    dy: 8.5,
+    pvp: 1.05,
+    liquidity: 4500000,
+    vacancy: 4.2,
+    shareholders: 350000,
+    netWorth: 3500000000,
+    managementReport: "O fundo manteve sua estratégia de alocação em galpões logísticos AAA. Neste mês, concluímos a renegociação do contrato com a locatária X, com reajuste de 5% acima da inflação. A vacância física permanece estável em 4.2%. O guidance de dividendos para o próximo semestre é de R$ 1,10 a R$ 1,15 por cota.",
+    history: [
+      { month: "Jan", price: 160, dividend: 1.10 },
+      { month: "Fev", price: 162, dividend: 1.10 },
+      { month: "Mar", price: 161, dividend: 1.10 },
+      { month: "Abr", price: 164, dividend: 1.10 },
+      { month: "Mai", price: 163, dividend: 1.10 },
+      { month: "Jun", price: 165.50, dividend: 1.10 },
+    ]
+  },
+  "MXRF11": {
+    ticker: "MXRF11",
+    name: "Maxi Renda",
+    type: "Papel",
+    segment: "Híbrido",
+    price: 10.45,
+    dy: 12.5,
+    pvp: 1.02,
+    liquidity: 12000000,
+    vacancy: 0,
+    shareholders: 1000000,
+    netWorth: 2500000000,
+    managementReport: "A gestão segue focada na originação de CRIs com boas garantias e taxas atrativas (IPCA + 7.5%). No mês, o fundo realizou o pré-pagamento de duas operações que geraram ganho de capital extraordinário, refletindo no leve aumento dos dividendos. A carteira de FIIs do fundo também apresentou valorização.",
+    history: [
+      { month: "Jan", price: 10.20, dividend: 0.11 },
+      { month: "Fev", price: 10.30, dividend: 0.11 },
+      { month: "Mar", price: 10.25, dividend: 0.12 },
+      { month: "Abr", price: 10.40, dividend: 0.11 },
+      { month: "Mai", price: 10.35, dividend: 0.11 },
+      { month: "Jun", price: 10.45, dividend: 0.12 },
+    ]
+  },
+  "KNRI11": {
+    ticker: "KNRI11",
+    name: "Kinea Renda Imobiliária",
+    type: "Tijolo",
+    segment: "Híbrido (Lajes e Logística)",
+    price: 158.20,
+    dy: 7.8,
+    pvp: 0.98,
+    liquidity: 3200000,
+    vacancy: 2.5,
+    shareholders: 250000,
+    netWorth: 3800000000,
+    managementReport: "O fundo assinou um novo contrato de locação no edifício Rochaverá, reduzindo a vacância do portfólio de lajes corporativas. No braço logístico, as operações seguem com 100% de ocupação e inadimplência zero. A gestão estuda novas aquisições no estado de São Paulo para o próximo trimestre.",
+    history: [
+      { month: "Jan", price: 155, dividend: 1.00 },
+      { month: "Fev", price: 156, dividend: 1.00 },
+      { month: "Mar", price: 154, dividend: 1.00 },
+      { month: "Abr", price: 157, dividend: 1.00 },
+      { month: "Mai", price: 159, dividend: 1.00 },
+      { month: "Jun", price: 158.20, dividend: 1.00 },
+    ]
+  }
+};
+
 export async function fetchFIIData(ticker: string): Promise<FIIData> {
-  const response = await axios.get(`/api/fii/${ticker}`);
-  return response.data;
+  // Simulate network delay
+  await new Promise(resolve => setTimeout(resolve, 800));
+  
+  const upperTicker = ticker.toUpperCase();
+  let data = mockFIIs[upperTicker];
+  
+  if (data) {
+    if (!livePrices[upperTicker]) livePrices[upperTicker] = data.price;
+    return { ...data, price: livePrices[upperTicker] };
+  } else {
+    // Generate realistic mock data for unknown tickers
+    const isPaper = Math.random() > 0.5;
+    let price = livePrices[upperTicker];
+    if (!price) {
+      price = Math.random() * 100 + 10;
+      livePrices[upperTicker] = parseFloat(price.toFixed(2));
+    }
+    
+    const dy = Math.random() * 8 + 6; // 6% to 14%
+    const pvp = Math.random() * 0.4 + 0.8; // 0.8 to 1.2
+    const vacancy = isPaper ? 0 : Math.random() * 15;
+    
+    const generatedData = {
+      ticker: upperTicker,
+      name: "Fundo Imobiliário " + upperTicker,
+      type: isPaper ? "Papel" : "Tijolo",
+      segment: isPaper ? "Recebíveis" : "Lajes Corporativas",
+      price: parseFloat(price.toFixed(2)),
+      dy: parseFloat(dy.toFixed(2)),
+      pvp: parseFloat(pvp.toFixed(2)),
+      liquidity: Math.floor(Math.random() * 5000000) + 100000,
+      vacancy: parseFloat(vacancy.toFixed(2)),
+      shareholders: Math.floor(Math.random() * 200000) + 10000,
+      netWorth: Math.floor(Math.random() * 2000000000) + 500000000,
+      managementReport: "O fundo " + upperTicker + " segue focado em sua tese de investimentos no segmento de " + (isPaper ? "Recebíveis" : "Lajes Corporativas") + ". A gestão destaca a resiliência do portfólio frente ao cenário macroeconômico atual. Não houve movimentações relevantes na carteira neste mês, e a distribuição de rendimentos segue em linha com o guidance.",
+      history: Array.from({ length: 6 }).map((_, i) => ({
+        month: ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun"][i],
+        price: parseFloat((livePrices[upperTicker] * (1 + (Math.random() * 0.1 - 0.05))).toFixed(2)),
+        dividend: parseFloat(((livePrices[upperTicker] * (dy / 100)) / 12).toFixed(2))
+      }))
+    };
+    return generatedData as FIIData;
+  }
+}
+
+export async function fetchLiveQuote(ticker: string): Promise<{ ticker: string, price: number, timestamp: string }> {
+  const upperTicker = ticker.toUpperCase();
+  let currentPrice = livePrices[upperTicker];
+  
+  if (!currentPrice) {
+    currentPrice = mockFIIs[upperTicker]?.price || (Math.random() * 100 + 10);
+    livePrices[upperTicker] = currentPrice;
+  }
+
+  // Simulate real-time market fluctuation (-0.5% to +0.5%)
+  const fluctuation = currentPrice * (Math.random() * 0.01 - 0.005);
+  const newPrice = parseFloat((currentPrice + fluctuation).toFixed(2));
+  livePrices[upperTicker] = newPrice;
+
+  return {
+    ticker: upperTicker,
+    price: newPrice,
+    timestamp: new Date().toISOString()
+  };
 }
 
 export async function generateAIAnalysis(fii: FIIData): Promise<AIAnalysis> {
@@ -16,29 +148,26 @@ export async function generateAIAnalysis(fii: FIIData): Promise<AIAnalysis> {
       return generateProgrammaticAnalysis(fii);
     }
 
-    const prompt = `
-      Atue como um analista sênior de Fundos Imobiliários (FIIs).
-      Analise os seguintes dados do FII ${fii.ticker} (${fii.name}):
-      - Tipo: ${fii.type}
-      - Segmento: ${fii.segment}
-      - Preço: R$ ${fii.price}
-      - Dividend Yield (DY): ${fii.dy}%
-      - P/VP: ${fii.pvp}
-      - Liquidez Diária: R$ ${fii.liquidity}
-      - Vacância: ${fii.vacancy}%
-      - Trecho do Relatório Gerencial: "${fii.managementReport}"
-      
-      Retorne a análise ESTRITAMENTE no seguinte formato JSON, sem marcação markdown e sem texto adicional:
-      {
-        "pros": ["ponto positivo 1", "ponto positivo 2", "ponto positivo 3"],
-        "cons": ["ponto negativo 1", "ponto negativo 2"],
-        "diagnosis": "FII Forte" | "FII Moderado" | "FII Arriscado",
-        "recommendation": "Sua recomendação detalhada aqui...",
-        "explanation": "Explicação simples sobre a estratégia do fundo e riscos...",
-        "reportAnalysis": "Análise crítica do trecho do relatório gerencial, destacando a visão da gestão e perspectivas...",
-        "score": 8.5
-      }
-    `;
+    const prompt = "Atue como um analista sênior de Fundos Imobiliários (FIIs).\n" +
+      "Analise os seguintes dados do FII " + fii.ticker + " (" + fii.name + "):\n" +
+      "- Tipo: " + fii.type + "\n" +
+      "- Segmento: " + fii.segment + "\n" +
+      "- Preço: R$ " + fii.price + "\n" +
+      "- Dividend Yield (DY): " + fii.dy + "%\n" +
+      "- P/VP: " + fii.pvp + "\n" +
+      "- Liquidez Diária: R$ " + fii.liquidity + "\n" +
+      "- Vacância: " + fii.vacancy + "%\n" +
+      "- Trecho do Relatório Gerencial: \"" + fii.managementReport + "\"\n\n" +
+      "Retorne a análise ESTRITAMENTE no seguinte formato JSON, sem marcação markdown e sem texto adicional:\n" +
+      "{\n" +
+      "  \"pros\": [\"ponto positivo 1\", \"ponto positivo 2\", \"ponto positivo 3\"],\n" +
+      "  \"cons\": [\"ponto negativo 1\", \"ponto negativo 2\"],\n" +
+      "  \"diagnosis\": \"FII Forte\" | \"FII Moderado\" | \"FII Arriscado\",\n" +
+      "  \"recommendation\": \"Sua recomendação detalhada aqui...\",\n" +
+      "  \"explanation\": \"Explicação simples sobre a estratégia do fundo e riscos...\",\n" +
+      "  \"reportAnalysis\": \"Análise crítica do trecho do relatório gerencial, destacando a visão da gestão e perspectivas...\",\n" +
+      "  \"score\": 8.5\n" +
+      "}";
 
     const response = await ai.models.generateContent({
       model: "gemini-3.1-pro-preview",
@@ -144,22 +273,18 @@ export async function analyzeManagementReport(reportText: string): Promise<Repor
       return generateProgrammaticReportAnalysis(reportText);
     }
 
-    const prompt = `
-      Atue como um analista sênior de Fundos Imobiliários (FIIs).
-      Leia o seguinte texto extraído de um Relatório Gerencial e faça uma análise crítica.
-      
-      TEXTO DO RELATÓRIO:
-      "${reportText}"
-      
-      Retorne a análise ESTRITAMENTE no seguinte formato JSON, sem marcação markdown e sem texto adicional:
-      {
-        "summary": "Resumo executivo do relatório em 2 ou 3 frases...",
-        "managementTone": "Otimista" | "Neutro" | "Pessimista",
-        "dividendGuidance": "O que a gestão fala sobre os próximos dividendos...",
-        "risks": ["risco 1 citado", "risco 2 citado"],
-        "highlights": ["destaque positivo 1", "destaque positivo 2"]
-      }
-    `;
+    const prompt = "Atue como um analista sênior de Fundos Imobiliários (FIIs).\n" +
+      "Leia o seguinte texto extraído de um Relatório Gerencial e faça uma análise crítica.\n\n" +
+      "TEXTO DO RELATÓRIO:\n" +
+      "\"" + reportText + "\"\n\n" +
+      "Retorne a análise ESTRITAMENTE no seguinte formato JSON, sem marcação markdown e sem texto adicional:\n" +
+      "{\n" +
+      "  \"summary\": \"Resumo executivo do relatório em 2 ou 3 frases...\",\n" +
+      "  \"managementTone\": \"Otimista\" | \"Neutro\" | \"Pessimista\",\n" +
+      "  \"dividendGuidance\": \"O que a gestão fala sobre os próximos dividendos...\",\n" +
+      "  \"risks\": [\"risco 1 citado\", \"risco 2 citado\"],\n" +
+      "  \"highlights\": [\"destaque positivo 1\", \"destaque positivo 2\"]\n" +
+      "}";
 
     const response = await ai.models.generateContent({
       model: "gemini-3.1-pro-preview",

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { fetchFIIData, generateAIAnalysis, analyzeManagementReport } from '@/services/api';
+import { fetchFIIData, generateAIAnalysis, analyzeManagementReport, fetchLiveQuote } from '@/services/api';
 import { FIIData, AIAnalysis, ReportAnalysisResult } from '@/types';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
@@ -72,9 +72,7 @@ export default function App() {
 
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/fii/${fiiData.ticker}/quote`);
-        if (!res.ok) return;
-        const data = await res.json();
+        const data = await fetchLiveQuote(fiiData.ticker);
         
         setLivePrice(prev => {
           if (prev !== null) {
