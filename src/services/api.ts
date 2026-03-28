@@ -73,23 +73,40 @@ const mockFIIs: Record<string, any> = {
 };
 
 export async function fetchFIIData(ticker: string): Promise<FIIData> {
-  // Simulate network delay
-  await new Promise(resolve => setTimeout(resolve, 800));
-  
   const upperTicker = ticker.toUpperCase();
+  
+  // Tenta buscar o preço real da B3 usando a API do Yahoo Finance (via proxy CORS)
+  let realPrice: number | null = null;
+  try {
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${upperTicker}.SA`;
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+    const response = await fetch(proxyUrl);
+    if (response.ok) {
+      const data = await response.json();
+      const result = data?.chart?.result?.[0];
+      if (result && result.meta && result.meta.regularMarketPrice) {
+        realPrice = result.meta.regularMarketPrice;
+        livePrices[upperTicker] = realPrice;
+      }
+    }
+  } catch (error) {
+    console.error("Erro ao buscar preço real na B3:", error);
+  }
+
   let data = mockFIIs[upperTicker];
   
   if (data) {
-    if (!livePrices[upperTicker]) livePrices[upperTicker] = data.price;
-    return { ...data, price: livePrices[upperTicker] };
+    const finalPrice = realPrice !== null ? realPrice : (livePrices[upperTicker] || data.price);
+    livePrices[upperTicker] = finalPrice;
+    return { ...data, price: finalPrice };
   } else {
     // Generate realistic mock data for unknown tickers
     const isPaper = Math.random() > 0.5;
-    let price = livePrices[upperTicker];
+    let price = realPrice !== null ? realPrice : livePrices[upperTicker];
     if (!price) {
       price = Math.random() * 100 + 10;
-      livePrices[upperTicker] = parseFloat(price.toFixed(2));
     }
+    livePrices[upperTicker] = parseFloat(price.toFixed(2));
     
     const dy = Math.random() * 8 + 6; // 6% to 14%
     const pvp = Math.random() * 0.4 + 0.8; // 0.8 to 1.2
@@ -120,6 +137,30 @@ export async function fetchFIIData(ticker: string): Promise<FIIData> {
 
 export async function fetchLiveQuote(ticker: string): Promise<{ ticker: string, price: number, timestamp: string }> {
   const upperTicker = ticker.toUpperCase();
+  
+  // Tenta buscar o preço real da B3
+  try {
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${upperTicker}.SA`;
+    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+    const response = await fetch(proxyUrl);
+    if (response.ok) {
+      const data = await response.json();
+      const result = data?.chart?.result?.[0];
+      if (result && result.meta && result.meta.regularMarketPrice) {
+        const realPrice = result.meta.regularMarketPrice;
+        livePrices[upperTicker] = realPrice;
+        return {
+          ticker: upperTicker,
+          price: realPrice,
+          timestamp: new Date().toISOString()
+        };
+      }
+    }
+  } catch (error) {
+    console.error("Erro ao buscar cotação real na B3:", error);
+  }
+
+  // Fallback para simulação caso a API falhe
   let currentPrice = livePrices[upperTicker];
   
   if (!currentPrice) {
