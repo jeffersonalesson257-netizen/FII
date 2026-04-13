@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import { Analytics } from '@vercel/analytics/react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'comparador' | 'relatorio'>('dashboard');
@@ -685,6 +686,7 @@ export default function App() {
           </motion.div>
         )}
       </main>
+      <Analytics />
     </div>
   );
 }
